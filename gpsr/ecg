@@ -1,0 +1,15 @@
+N=40;
+K=10;
+res=1.0/128.0;
+
+f = 0.9/res/2;
+t=0:res:res*(N-1);
+x=sin(2*pi*f*t)';
+
+F=fft(eye(N))/sqrt(N);
+%Fi=inv(F); % For the fourier basis
+Fi=F';
+
+A = randn(K,N);
+A = orth(A')';
+B=A*Fi;
