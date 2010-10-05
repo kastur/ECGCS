@@ -5,10 +5,10 @@ load ecg128.mat
 
 
 %%
-w = zeros(length(rr), 40);
+w = zeros(length(rr), 64);
 for i = 1:length(rr),
   rri = rr(i);
-  x = ecg128((rri-20):(rri+19));
+  x = ecg128((rri-32):(rri+31));
   y = w(i);
   w(i,:) = x;
 end
