@@ -1,0 +1,77 @@
+file: README.NETFILES		G. Moody	14 September 1999
+				Last revised:	   27 May 2005
+
+WFDB software reads its input from files that can be located on local
+disks or (if NETFILES support is present) on remote web and FTP servers.
+
+This version of the WFDB software package contains NETFILES support in the
+WFDB library, which is compiled if you have previously installed libcurl
+(see http://curl.haxx.se/) or libwww (see http://www.w3.org/Library/).
+NETFILES support is known to work well under FreeBSD, GNU/Linux, Mac OS X,
+MS-Windows, and Solaris.
+
+To use NETFILES once this software has been compiled and installed, the WFDB
+path should contain one or more components that refer to remote files available
+via http or ftp.  If NETFILES support is included, the default WFDB path
+(defined in lib/wfdblib.h) is
+	. /usr/database http://www.physionet.org/physiobank/database
+(i.e., the first component is the current (local) directory, the second is
+/usr/database in the local file system, and the third component is the
+top-level PhysioBank database directory).  If you use a local PhysioBank
+mirror, you may wish to change www.physionet.org to the hostname of your local
+mirror in lib/wfdblib.h before compiling the WFDB library.  You may always
+override this path by setting the WFDB environment variable.
+
+Provided that a remote path component (one beginning with http:// or ftp://)
+is included in the WFDB path, all WFDB applications that read local files will
+then be able to read remote files with no other changes.  Note that the default
+setting allows access by WFDB applications to any of the PhysioBank records by
+prefixing the additional path information to the record name, as in these
+examples:
+
+	rdsamp -r mitdb/100 -t .1     (MIT-BIH Arrhythmia Database, record 100)
+	rdann -r slpdb/slp67x -a st   (MIT-BIH Polysomnographic Database,
+				       record slp67x)
+	wave -r mimicdb/237/237	-a al (MIMIC Database, record 237 -- note that
+				       since each MIMIC record is kept in its
+				       own subdirectory of mimicdb, two levels
+				       of additional path information are
+				       necessary)
+
+If you have built the WFDB library using libcurl, version 7.12.0 or later,
+then WFDB applications can also read password-protected files.  The simplest
+way to use this feature is to create a text file named .netrc containing
+entries such as
+
+    machine www.physionet.org
+        login testuser
+        password PhysioNet
+
+If your .netrc contains the three lines as shown above, and your WFDB library
+was compiled with libcurl 7.12.0 or later, you can test this feature with a
+command such as:
+
+	rdann -r access-demo/100s -a atr
+
+which will read 'atr' annotations from a password-protected copy of the
+sample record (100s) on the master PhysioNet server.  Your browser can read the
+same files at http://physionet.org/physiobank/database/access-demo/ (enter
+"testuser" and "PhysioNet" respectively when prompted for a user name and
+a password).  This demo uses digest authentication (the password is transmitted
+in encrypted form, and compared against an encrypted copy on the server), but
+basic authentication (in which the password is transmitted in cleartext) is
+also supported.  Note, however that the data retrieved from the server travel
+across the net in cleartext. If you wish to provide restricted access to
+protected health information on your server to WFDB applications, we recommend
+seting up SSL on your server, and using the SSL-enabled version of libcurl;
+using SSL, the data travel in encrypted form across the net.
+
+NETFILES support was originally implemented by Michael Dakin as part of his
+summer 1999 UROP project at MIT.  Mike used the W3C's libwww in his original
+implementation.  The libwww maintainers last updated the library in June, 2002,
+and in January, 2004, the W3C formally announced that it would not continue
+development of libwww, although the library remains freely available.  In May,
+2005, Benjamin Moody reimplemented NETFILES using libcurl.  The primary
+advantages of libcurl over libwww are that libcurl is smaller and faster, it
+supports access to password-protected files, and it is actively maintained.
+Both libraries are freely available on all popular platforms.

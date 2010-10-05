@@ -1,0 +1,34 @@
+.TH SUMANN 1 "31 July 2002" "WFDB 10.2.7" "WFDB Applications Guide"
+.SH NAME
+sumann \- summarize the contents of a WFDB annotation file
+.SH SYNOPSIS
+\fBsumann -r\fR \fIrecord\fR \fB-a\fR \fIannotator\fR [ \fIoptions\fR ... ]
+.SH DESCRIPTION
+\fBsumann\fR reads the annotation file specified by \fIrecord\fR and
+\fIannotator\fR and produces a tabular summary of its contents, including
+the number of annotations of each type as well the duration and number of
+episodes of each rhythm and signal quality.
+.PP
+\fIOptions\fR include:
+.TP
+\fB-f\fR \fItime\fR
+Begin at the specified \fItime\fR.
+.TP
+\fB-h\fR
+Print a usage summary.
+.TP
+\fB-q\fR
+Summarize QRS annotations only.
+.TP
+\fB-t\fR \fItime\fR
+Stop at the specified \fItime\fR.
+.SH ENVIRONMENT
+.PP
+It may be necessary to set and export the shell variable \fBWFDB\fR (see
+\fBsetwfdb\fR(1)).
+.SH SEE ALSO
+\fBrdann\fR(1), \fBsetwfdb\fR(1)
+.SH AUTHOR
+George B. Moody (george@mit.edu)
+.SH SOURCE
+http://www.physionet.org/physiotools/wfdb/app/sumann.c
