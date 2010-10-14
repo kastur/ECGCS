@@ -68,97 +68,95 @@ Change History: Fixed the code such that 1D vectors passed to it can be in
 #define mat(a, i, j) (*(a + (m*(j)+i)))  /* macro for matrix indices */
 
 void fpsconv(double *x_in, int lx, double *h0, double *h1, int lhm1, 
-	double *x_outl, double *x_outh);
+						 double *x_outl, double *x_outh);
 
-void MDWT(const double *x, int m, int n, const double *h, int lh, int L, double *y)
-{
-  double  *h0, *h1, *ydummyl, *ydummyh, *xdummy;
-  long i, j;
-  int actual_L, actual_m, actual_n, r_o_a, c_o_a, ir, ic, lhm1;
- xdummy = (double *)calloc(max(m,n)+lh-1,sizeof(double));
-  ydummyl = (double *)calloc(max(m,n),sizeof(double));
-  ydummyh = (double *)calloc(max(m,n),sizeof(double));
-  h0 = (double *)calloc(lh,sizeof(double));
-  h1 = (double *)calloc(lh,sizeof(double));
-  
-  
+template<int m, int n, int lh, int L>
+void MDWT(const double *x, const double *h, double *y) {
+
+  const int lhm1 = lh - 1;
+  double xdummy[max(m,n)+lh-1];
+  double ydummyl[max(m,n)];
+  double ydummyh[max(m,n)];
+  double h0[lh];
+  double h1[lh];
+
+  int r_o_a, c_o_a, ir, ic;
+
+  int actual_m = 2*m;
+  int actual_n = 2*n;
+
   /* analysis lowpass and highpass */
-  if (n==1){
-    n = m;
-    m = 1;
-  }
-  for (i=0; i<lh; i++){
+  for (int i = 0; i < lh; i++) {
     h0[i] = h[lh-i-1];
     h1[i] =h[i];
   }
-  for (i=0; i<lh; i+=2)
+
+  for (int i = 0; i < lh; i += 2)
     h1[i] = -h1[i];
-  
-  lhm1 = lh - 1;
-  actual_m = 2*m;
-  actual_n = 2*n;
+
   
   /* main loop */
-  for (actual_L=1; actual_L <= L; actual_L++){
-    if (m==1)
+  for (int actual_L = 1; actual_L <= L; actual_L++) {
+    if (m == 1) {
       actual_m = 1;
-    else{
+		} else {
       actual_m = actual_m/2;
-      r_o_a = actual_m/2;     
+      r_o_a = actual_m/2;
     }
     actual_n = actual_n/2;
     c_o_a = actual_n/2;
     
     /* go by rows */
-    for (ir=0; ir<actual_m; ir++){            /* loop over rows */
+    for (ir = 0; ir < actual_m; ir++) {  // loop over rows
       /* store in dummy variable */
-      for (i=0; i<actual_n; i++)
-	if (actual_L==1)  
-	  xdummy[i] = mat(x, ir, i);  
-	else 
-	  xdummy[i] = mat(y, ir, i);  
+      for (int i = 0; i < actual_n; i++) {
+				if (actual_L == 1)
+					xdummy[i] = mat(x, ir, i);
+				else
+					xdummy[i] = mat(y, ir, i);
+			}
+
       /* perform filtering lowpass and highpass*/
       fpsconv(xdummy, actual_n, h0, h1, lhm1, ydummyl, ydummyh); 
+
       /* restore dummy variables in matrices */
       ic = c_o_a;
-      for  (i=0; i<c_o_a; i++){    
-	mat(y, ir, i) = ydummyl[i];  
-	mat(y, ir, ic++) = ydummyh[i];  
-      } 
-    }  
+      for  (int i = 0; i < c_o_a; i++) {
+				mat(y, ir, i) = ydummyl[i];
+				mat(y, ir, ic++) = ydummyh[i];
+      }
+		}
     
     /* go by columns in case of a 2D signal*/
-    if (m>1){
-      for (ic=0; ic<actual_n; ic++){            /* loop over column */
-	/* store in dummy variables */
-	for (i=0; i<actual_m; i++)
-	  xdummy[i] = mat(y, i, ic);  
-	/* perform filtering lowpass and highpass*/
-	fpsconv(xdummy, actual_m, h0, h1, lhm1, ydummyl, ydummyh); 
-	/* restore dummy variables in matrix */
-	ir = r_o_a;
-	for (i=0; i<r_o_a; i++){    
-	  mat(y, i, ic) = ydummyl[i];  
-	  mat(y, ir++, ic) = ydummyh[i];  
-	}
+    if (m > 1) {
+      for (ic = 0; ic < actual_n; ic++) {  // loop over column
+			/* store in dummy variables */
+				for (int i = 0; i < actual_m; i++)
+					xdummy[i] = mat(y, i, ic);  
+
+				/* perform filtering lowpass and highpass*/
+				fpsconv(xdummy, actual_m, h0, h1, lhm1, ydummyl, ydummyh); 
+
+				/* restore dummy variables in matrix */
+				ir = r_o_a;
+				for (int i = 0; i < r_o_a; i++){    
+					mat(y, i, ic) = ydummyl[i];  
+					mat(y, ir++, ic) = ydummyh[i];  
+				}
       }
     }
   }
 }
 
 void fpsconv(double *x_in, int lx, double *h0, double *h1, int lhm1, 
-	double *x_outl, double *x_outh)
-{
-  int i, j, ind;
-  double x0, x1;
-
-  for (i=lx; i < lx+lhm1; i++)
+						 double *x_outl, double *x_outh) {
+  for (int i = lx; i < lx + lhm1; i++)
     x_in[i] = *(x_in+(i-lx));
-  ind = 0;
-  for (i=0; i<(lx); i+=2){
-    x0 = 0;
-    x1 = 0;
-    for (j=0; j<=lhm1; j++){
+
+	for (int i = 0, ind = 0; i<lx; i += 2){
+    double x0 = 0;
+    double x1 = 0;
+    for (int j = 0; j <= lhm1; j++) {
       x0 = x0 + x_in[i+j]*h0[lhm1-j];
       x1 = x1 + x_in[i+j]*h1[lhm1-j];
     }

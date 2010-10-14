@@ -74,82 +74,86 @@ decription of the matlab call:
 void bpsconv(double *x_out, int lx, double *g0, double *g1, int lhm1, 
 	int lhhm1, double *x_inl, double *x_inh);
 
+template<int n, int m, int lh, int L>
+void MIDWT(double *x, const double *h, const double *y) {
 
-void MIDWT(double *x, int m, int n, const double *h, int lh, int L, const double *y)
-{
-  double  *g0, *g1, *ydummyl, *ydummyh, *xdummy;
-  long i, j;
-  int actual_L, actual_m, actual_n, r_o_a, c_o_a, ir, ic, lhm1, lhhm1, sample_f;
-  xdummy = (double *)calloc(max(m,n),sizeof(double));
-  ydummyl = (double *)calloc(max(m,n)+lh/2-1,sizeof(double));
-  ydummyh = (double *)calloc(max(m,n)+lh/2-1,sizeof(double));
-  g0 = (double *)calloc(lh,sizeof(double));
-  g1 = (double *)calloc(lh,sizeof(double));
+  const int lhm1 = lh - 1;
+  const int lhhm1 = lh/2 - 1;
 
-  if (n==1){
-    n = m;
-    m = 1;
-  }
+  double xdummy[max(m,n)];
+	double ydummyl[max(m,n)+lh/2-1];
+	double ydummyh[max(m,n)+lh/2-1];
+	double g0[lh];
+	double g1[lh];
+
+	int r_o_a, c_o_a, ir, ic;
+
+  int actual_m;
+	int actual_n;
+
   /* synthesis lowpass and highpass */
-  for (i=0; i<lh; i++){
+  for (int i = 0; i < lh; i++) {
     g0[i] = h[i];
     g1[i] = h[lh-i-1];
   }
-  for (i=1; i<=lh; i+=2)
+  for (int i = 1; i <= lh; i += 2)
     g1[i] = -g1[i];
   
-  lhm1 = lh - 1;
-  lhhm1 = lh/2 - 1;
+
   /* 2^L */
-  sample_f = 1;
-  for (i=1; i<L; i++)
+  int sample_f = 1;
+  for (int i = 1; i < L; i++)
     sample_f = sample_f*2;
   
-  if (m>1)
+  if (m > 1)
     actual_m = m/sample_f;
   else 
     actual_m = 1;
   actual_n = n/sample_f;
 
-  for (i=0; i<(m*n); i++)
+  for (int i = 0; i < (m*n); i++)
     x[i] = y[i];
   
   /* main loop */
-  for (actual_L=L; actual_L >= 1; actual_L--){
+  for (int actual_L = L; actual_L >= 1; actual_L--) {
     r_o_a = actual_m/2;
     c_o_a = actual_n/2;
     
     /* go by columns in case of a 2D signal*/
-    if (m>1){
-      for (ic=0; ic<actual_n; ic++){            /* loop over column */
-	/* store in dummy variables */
-	ir = r_o_a;
-	for (i=0; i<r_o_a; i++){    
-	  ydummyl[i+lhhm1] = mat(x, i, ic);  
-	  ydummyh[i+lhhm1] = mat(x, ir++, ic);  
-	}
-	/* perform filtering lowpass and highpass*/
-	bpsconv(xdummy, r_o_a, g0, g1, lhm1, lhhm1, ydummyl, ydummyh); 
-	/* restore dummy variables in matrix */
-	for (i=0; i<actual_m; i++)
-	  mat(x, i, ic) = xdummy[i];  
-      }
+    if (m > 1) {
+      for (ic=0; ic<actual_n; ic++) {  // loop over column
+				/* store in dummy variables */
+				ir = r_o_a;
+				for (int i = 0; i < r_o_a; i++) {
+					ydummyl[i+lhhm1] = mat(x, i, ic);
+					ydummyh[i+lhhm1] = mat(x, ir++, ic);
+				}
+
+				/* perform filtering lowpass and highpass*/
+				bpsconv(xdummy, r_o_a, g0, g1, lhm1, lhhm1, ydummyl, ydummyh); 
+
+				/* restore dummy variables in matrix */
+				for (int i = 0; i < actual_m; i++)
+					mat(x, i, ic) = xdummy[i];
+			}
     }
+
     /* go by rows */
-    for (ir=0; ir<actual_m; ir++){            /* loop over rows */
+    for (ir = 0; ir < actual_m; ir++) {  // loop over rows
       /* store in dummy variable */
       ic = c_o_a;
-      for  (i=0; i<c_o_a; i++){    
-	ydummyl[i+lhhm1] = mat(x, ir, i);  
-	ydummyh[i+lhhm1] = mat(x, ir, ic++);  
+      for  (int i = 0; i < c_o_a; i++) {
+				ydummyl[i+lhhm1] = mat(x, ir, i);  
+				ydummyh[i+lhhm1] = mat(x, ir, ic++);  
       } 
       /* perform filtering lowpass and highpass*/
       bpsconv(xdummy, c_o_a, g0, g1, lhm1, lhhm1, ydummyl, ydummyh); 
       /* restore dummy variables in matrices */
-      for (i=0; i<actual_n; i++)
+      for (int i=0; i<actual_n; i++)
         mat(x, ir, i) = xdummy[i];  
     }  
-    if (m==1)
+
+    if (m == 1)
       actual_m = 1;
     else
       actual_m = actual_m*2;
@@ -158,21 +162,19 @@ void MIDWT(double *x, int m, int n, const double *h, int lh, int L, const double
 }
 
 void bpsconv(double *x_out, int lx, double *g0, double *g1, int lhm1, 
-	int lhhm1, double *x_inl, double *x_inh)
-{
-  int i, j, ind, tj;
+	int lhhm1, double *x_inl, double *x_inh) {
   double x0, x1;
-
-  for (i=lhhm1-1; i > -1; i--){
+  for (int i = lhhm1 - 1; i > -1; i--) {
     x_inl[i] = x_inl[lx+i];
     x_inh[i] = x_inh[lx+i];
   }
-  ind = 0;
-  for (i=0; i<(lx); i++){
+
+  int tj;
+  for (int i = 0, ind = 0; i < lx; i++) {
     x0 = 0;
     x1 = 0;
     tj = -2;
-    for (j=0; j<=lhhm1; j++){
+    for (int j=0; j <= lhhm1; j++){
       tj+=2;
       x0 = x0 + x_inl[i+j]*g0[lhm1-1-tj] + x_inh[i+j]*g1[lhm1-1-tj] ;
       x1 = x1 + x_inl[i+j]*g0[lhm1-tj] + x_inh[i+j]*g1[lhm1-tj] ;
