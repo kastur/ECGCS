@@ -1,0 +1,3 @@
+set solib-search-path /home/k/ECGCS/android-ecgcs/obj/local/armeabi
+directory /home/k/android-ndk-r4b/build/platforms/android-8/arch-arm/usr/include
+directory /home/k/ECGCS/android-ecgcs/jni

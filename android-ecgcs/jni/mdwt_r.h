@@ -1,0 +1,132 @@
+/*
+File Name: MDWT.c
+Last Modification Date:	06/14/95	13:15:44
+Current Version: MDWT.c	2.4
+File Creation Date: Wed Oct 19 10:51:58 1994
+Author: Markus Lang  <lang@jazz.rice.edu>
+
+Copyright (c) 2000 RICE UNIVERSITY. All rights reserved.
+Created by Markus Lang, Department of ECE, Rice University. 
+
+This software is distributed and licensed to you on a non-exclusive 
+basis, free-of-charge. Redistribution and use in source and binary forms, 
+with or without modification, are permitted provided that the following 
+conditions are met:
+
+1. Redistribution of source code must retain the above copyright notice, 
+   this list of conditions and the following disclaimer.
+2. Redistribution in binary form must reproduce the above copyright notice, 
+   this list of conditions and the following disclaimer in the 
+   documentation and/or other materials provided with the distribution.
+3. All advertising materials mentioning features or use of this software 
+   must display the following acknowledgment: This product includes 
+   software developed by Rice University, Houston, Texas and its contributors.
+4. Neither the name of the University nor the names of its contributors 
+   may be used to endorse or promote products derived from this software 
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY WILLIAM MARSH RICE UNIVERSITY, HOUSTON, TEXAS, 
+AND CONTRIBUTORS AS IS AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, 
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL RICE UNIVERSITY 
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
+OR BUSINESS INTERRUPTIONS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+OTHERWISE), PRODUCT LIABILITY, OR OTHERWISE ARISING IN ANY WAY OUT OF THE 
+USE OF THIS SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+For information on commercial licenses, contact Rice University's Office of 
+Technology Transfer at techtran@rice.edu or (713) 348-6173
+
+Change History: Fixed the code such that 1D vectors passed to it can be in
+                either passed as a row or column vector. Also took care of 
+		the code such that it will compile with both under standard
+		C compilers as well as for ANSI C compilers
+		Jan Erik Odegard <odegard@ece.rice.edu> Wed Jun 14 1995
+
+%y = mdwt(x,h,L);
+% 
+% function computes the discrete wavelet transform y for a 1D or 2D input
+% signal x.
+%
+%    Input:
+%	x    : finite length 1D or 2D signal (implicitely periodized)
+%       h    : scaling filter
+%       L    : number of levels. in case of a 1D signal length(x) must be
+%              divisible by 2^L; in case of a 2D signal the row and the
+%              column dimension must be divisible by 2^L.
+%
+% see also: midwt, mrdwt, mirdwt
+*/
+
+#include <math.h>
+
+template<class T>
+void fpsconv(vector<T>& x_in, int lx, vector<T>& h0, vector<T>& h1, int lhm1, 
+						 vector<T>& x_outl, vector<T>& x_outh);
+
+template<class T>
+void MDWT(const vector<T>& x, const vector<T>& h, const int L, vector<T>& y) {
+  int lh = h.size();
+  int lhm1 = lh - 1;
+  int n = x.size();
+  vector<T> xdummy(n+lh-1);
+  vector<T> ydummyl(n);
+  vector<T> ydummyh(n);
+  vector<T> h0(lh);
+  vector<T> h1(lh);
+  int actual_n, ic;
+  
+  /* analysis lowpass and highpass */
+  for (int i = 0; i < lh; i++) {
+    h0[i] = h[lh-i-1];
+    h1[i] = h[i];
+  }
+
+  for (int i = 0; i < lh; i += 2)
+    h1[i] = -h1[i];
+
+  actual_n = n;
+
+  /* main loop */
+  for (int actual_L = 1; actual_L <= L; actual_L++, actual_n /= 2) {    
+    /* go by rows */
+    /* store in dummy variable */
+    for (int i = 0; i < actual_n; i++) {
+    	if (actual_L==1)  
+				xdummy[i] = x[i];
+    	else 
+				xdummy[i] = y[i];
+    }
+
+    /* perform filtering lowpass and highpass*/
+    fpsconv(xdummy, actual_n, h0, h1, lhm1, ydummyl, ydummyh); 
+
+    /* restore dummy variables in matrices */
+    ic = actual_n/2;
+    for  (int i = 0; i < actual_n/2; i++) {
+			y[i] = ydummyl[i];
+			y[ic++] = ydummyh[i];
+    }
+	}
+}
+
+template<class T>
+void fpsconv(vector<T>& x_in, int lx, vector<T>& h0, vector<T>& h1, int lhm1, 
+						 vector<T>& x_outl, vector<T>& x_outh) {
+  for (int i = lx; i < lx + lhm1; i++)
+    x_in[i] = x_in[i-lx];
+
+	for (int i = 0, ind = 0; i<lx; i += 2){
+    double x0 = 0;
+    double x1 = 0;
+    for (int j = 0; j <= lhm1; j++) {
+      x0 = x0 + x_in[i+j]*h0[lhm1-j];
+      x1 = x1 + x_in[i+j]*h1[lhm1-j];
+    }
+    x_outl[ind] = x0;
+    x_outh[ind++] = x1;
+  }
+}
